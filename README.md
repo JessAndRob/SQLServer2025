@@ -9,9 +9,10 @@ With AI comes responsibility though, we’ll also discuss the risks associated w
 
 ## Ideas
 
+**weather idea**
 > PowerShell and AI - local data in database - get todays weather with api and LLM to make something from local data and weather and store in database - psconfeu session with keywords so we find it again
 
-
+**N8n**
 André used this tool to create embeddings in the database and to then chat with the data
 https://github.com/n8n-io/n8n
 
