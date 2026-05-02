@@ -8,7 +8,8 @@
 [CmdletBinding()]
 param(
     [string] $SqlInstance = "10.10.10.65",
-    [pscredential] $SqlCredential,
+    [pscredential] $SqlCredential = (New-Object pscredential -ArgumentList 'sa', (Get-Secret dbapassword)),
+
     [string] $DatabaseName        = 'pwsh-scripts-🤣',
     [string] $MasterKeyPassword   = 'PSConfEU2026!',
     [string] $SecretPrefix        = 'psconfeu2026-',
