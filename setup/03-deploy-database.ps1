@@ -23,10 +23,12 @@ Write-PSFMessage -Level Host -Message "Deploying [$DatabaseName] to $SqlInstance
 # Pull the bits we stashed in 00-openai.ps1
 Write-PSFMessage -Level Verbose -Message "Reading OpenAI secrets with prefix '$SecretPrefix' from SecretManagement"
 $endpoint   = (Get-Secret -Name "$($SecretPrefix)openai-endpoint"   -AsPlainText).TrimEnd('/')
+$Uri        =        ($endpoint -split 'com')[0] + 'com'
 $apiKey     =  Get-Secret -Name "$($SecretPrefix)openai-key"        -AsPlainText
 $deployment =  Get-Secret -Name "$($SecretPrefix)openai-deployment" -AsPlainText
 Write-PSFMessage -Level Host -Message "Endpoint:   $endpoint"
 Write-PSFMessage -Level Host -Message "Deployment: $deployment"
+Write-PSFMessage -Level Host -Message "Uri: $Uri"
 Write-PSFMessage -Level Host -Message "API key:    [redacted, $($apiKey.Length) chars]"
 
 # Load the script and substitute the sqlcmd-style variables. dbatools doesn't
@@ -43,6 +45,7 @@ $tokens = @{
     DatabaseName        = $DatabaseName
     MasterKeyPassword   = $MasterKeyPassword
     OpenAIEndpoint      = $endpoint
+    OpenAIUri           = $Uri
     OpenAIKey           = $apiKey
     EmbeddingDeployment = $deployment
     EmbeddingApiVersion = $EmbeddingApiVersion
@@ -51,6 +54,8 @@ $tokens = @{
 foreach ($name in $tokens.Keys) {
     $token = '$(' + $name + ')'
     $sql   = $sql.Replace($token, $tokens[$name])
+Write-PSFMessage -Level Verbose -Message "Substituted $($token) sqlcmd token with $($tokens[$name])"
+
 }
 Write-PSFMessage -Level Verbose -Message "Substituted $($tokens.Count) sqlcmd tokens"
 
@@ -61,6 +66,8 @@ $queryParams = @{
     EnableException = $true
 }
 if ($SqlCredential) { $queryParams.SqlCredential = $SqlCredential }
+
+Write-PSFMessage -Level Host -Message $sql
 
 Write-PSFMessage -Level Host -Message "Running deployment script against $SqlInstance"
 Invoke-DbaQuery @queryParams

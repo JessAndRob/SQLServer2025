@@ -4,7 +4,8 @@
 -- =====================================================================
 :setvar DatabaseName        "pwsh-scripts-🤣"
 :setvar MasterKeyPassword   "PSConfEU2026!"
-:setvar OpenAIEndpoint      "https://your-aoai.openai.azure.com"
+:setvar OpenAIEndpoint      "https://snover-ai.openai.azure.com/openai/deployments/text-embedding-3-small/embeddings?api-version=2024-02-01"
+:setvar OpenAIURI           "https://snover-ai.openai.azure.com/"
 :setvar OpenAIKey           "YOUR_KEY"
 :setvar EmbeddingDeployment "text-embedding-3-small"
 :setvar EmbeddingApiVersion "2024-02-01"
@@ -35,21 +36,21 @@ IF EXISTS (SELECT * FROM sys.external_models WHERE name = 'EmbeddingModel')
 DROP EXTERNAL MODEL EmbeddingModel;
 GO
 
-IF EXISTS (SELECT 1 FROM sys.database_scoped_credentials WHERE name = N'$(OpenAIEndpoint)')
-    DROP DATABASE SCOPED CREDENTIAL [$(OpenAIEndpoint)];
+IF EXISTS (SELECT 1 FROM sys.database_scoped_credentials WHERE name = N'$(OpenAIUri)')
+    DROP DATABASE SCOPED CREDENTIAL [$(OpenAIUri)];
 GO
 
-CREATE DATABASE SCOPED CREDENTIAL [$(OpenAIEndpoint)]
+CREATE DATABASE SCOPED CREDENTIAL [$(OpenAIUri)]
     WITH IDENTITY = 'HTTPEndpointHeaders',
          SECRET   = '{"api-key":"$(OpenAIKey)"}';
 GO
 
 CREATE EXTERNAL MODEL EmbeddingModel
-WITH ( LOCATION   = '$(OpenAIEndpoint)/openai/deployments/$(EmbeddingDeployment)/embeddings?api-version=$(EmbeddingApiVersion)',
+WITH ( LOCATION   = '$(OpenAIEndpoint)',
        API_FORMAT = 'Azure OpenAI',
        MODEL_TYPE = EMBEDDINGS,
        MODEL      = '$(EmbeddingDeployment)',
-       CREDENTIAL = [$(OpenAIEndpoint)] );
+       CREDENTIAL = [$(OpenAIUri)] );
 GO
 
 -- Always start from an empty table so re-runs reflect any schema edits and
