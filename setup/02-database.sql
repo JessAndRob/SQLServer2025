@@ -51,3 +51,19 @@ WITH ( LOCATION   = '$(OpenAIEndpoint)/openai/deployments/$(EmbeddingDeployment)
        MODEL      = '$(EmbeddingDeployment)',
        CREDENTIAL = [$(OpenAIEndpoint)] );
 GO
+
+-- Always start from an empty table so re-runs reflect any schema edits and
+-- demos begin from a known state. Drop first, then recreate.
+DROP TABLE IF EXISTS dbo.CmdletHelp;
+GO
+
+CREATE TABLE dbo.CmdletHelp (
+    CmdletId      INT IDENTITY PRIMARY KEY,
+    Name          NVARCHAR(200),
+    ModuleName    NVARCHAR(200),
+    Synopsis      NVARCHAR(MAX),
+    Description   NVARCHAR(MAX),
+    SearchText    NVARCHAR(MAX),     -- what we embed
+    Embedding     VECTOR(1536) NULL
+);
+GO
