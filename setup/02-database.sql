@@ -31,7 +31,8 @@ IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE name = '##MS_DatabaseMaste
 GO
 
 -- External model depends on the credential, so drop it first
-DROP EXTERNAL MODEL IF EXISTS EmbeddingModel;
+IF EXISTS (SELECT * FROM sys.external_models WHERE name = 'EmbeddingModel')
+DROP EXTERNAL MODEL EmbeddingModel;
 GO
 
 IF EXISTS (SELECT 1 FROM sys.database_scoped_credentials WHERE name = N'$(OpenAIEndpoint)')

@@ -5,11 +5,8 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
-    [string] $SqlInstance,
-
+    [string] $SqlInstance = "10.10.10.65",
     [pscredential] $SqlCredential,
-
     [string] $DatabaseName        = 'pwsh-scripts-🤣',
     [string] $MasterKeyPassword   = 'PSConfEU2026!',
     [string] $SecretPrefix        = 'psconfeu2026-',
