@@ -35,3 +35,31 @@ SET Embedding = AI_GENERATE_EMBEDDINGS(SearchText USE MODEL EmbeddingModel)
 WHERE Embedding IS NULL;'
 }
 Invoke-DbaQuery @UpdateEmbeddingsParams
+
+function Find-CmdletByMeaning {
+    param(
+        [Parameter(Mandatory)] [string] $Question,
+        [int] $Top = 5
+    )
+
+    $sql = @"
+DECLARE @q VECTOR(1536) =
+    AI_GENERATE_EMBEDDINGS(@question USE MODEL EmbeddingModel);
+
+SELECT TOP (@top)
+    Name,
+    ModuleName,
+    Synopsis,
+    VECTOR_DISTANCE('cosine', Embedding, @q) AS Distance
+FROM dbo.CmdletHelp
+WHERE Embedding IS NOT NULL
+ORDER BY Distance;
+"@
+
+    Invoke-DbaQuery -SqlInstance 'localhost' -Database 'AIDemo' -Query $sql `
+        -SqlParameter @{ question = $Question; top = $Top }
+}
+
+Find-CmdletByMeaning "I need to read a file line by line"
+Find-CmdletByMeaning "how do I parse JSON"
+Find-CmdletByMeaning "wait until a job finishes"

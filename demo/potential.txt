@@ -1,0 +1,105 @@
+Demo 3 — Sleeper pick: code similarity across a PowerShell script library
+The hook: "Show of hands — how many of you have a scripts folder where you suspect three different people have written Get-LastBackupAge independently?"
+The trick here is using PowerShell's AST so you embed functions, not whole files. That's what makes the results actually useful.
+Schema:
+sqlCREATE TABLE dbo.ScriptFunction (
+    FunctionId      INT IDENTITY PRIMARY KEY,
+    FilePath        NVARCHAR(500),
+    FunctionName    NVARCHAR(200),
+    ParamSignature  NVARCHAR(MAX),
+    Body            NVARCHAR(MAX),
+    DocComment      NVARCHAR(MAX),
+    SearchText      NVARCHAR(MAX),
+    Embedding       VECTOR(1536) NULL,
+    INDEX IX_FunctionName (FunctionName)
+);
+PowerShell ingestion using the AST:
+powershellfunction Get-ScriptFunction {
+    param([Parameter(Mandatory)][string]$Path)
+
+    Get-ChildItem -Path $Path -Recurse -Include *.ps1, *.psm1 | ForEach-Object {
+        $file = $_
+        $tokens = $errors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            $file.FullName, [ref]$tokens, [ref]$errors)
+
+        $ast.FindAll({
+            param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst]
+        }, $true) | ForEach-Object {
+            $fn         = $_
+            $params     = $fn.Body.ParamBlock.Parameters | ForEach-Object {
+                "$($_.StaticType.Name) $($_.Name.VariablePath.UserPath)"
+            }
+            $docComment = ($tokens | Where-Object {
+                $_.Kind -eq 'Comment' -and $_.Extent.StartLineNumber -lt $fn.Extent.StartLineNumber
+            } | Select-Object -Last 1).Text
+
+            [PSCustomObject]@{
+                FilePath       = $file.FullName
+                FunctionName   = $fn.Name
+                ParamSignature = ($params -join ', ')
+                Body           = $fn.Extent.Text
+                DocComment     = $docComment
+                SearchText     = @(
+                    "Function: $($fn.Name)",
+                    "Parameters: $($params -join ', ')",
+                    "Comment: $docComment",
+                    "Body: $($fn.Body.Extent.Text)"
+                ) -join "`n"
+            }
+        }
+    }
+}
+
+Get-ScriptFunction -Path 'C:\Repos\OurScripts' |
+    Write-DbaDbTableData -SqlInstance 'localhost' -Database 'AIDemo' `
+                         -Table ScriptFunction -AutoCreateTable:$false
+Embed and (since we might have a lot) build a real index:
+sqlUPDATE dbo.ScriptFunction
+SET Embedding = AI_GENERATE_EMBEDDINGS(SearchText USE MODEL EmbeddingModel)
+WHERE Embedding IS NOT NULL;
+
+-- Preview feature, but cool to demo
+CREATE VECTOR INDEX IX_ScriptFunction_Embedding
+ON dbo.ScriptFunction(Embedding)
+WITH (METRIC = 'cosine', TYPE = 'DiskANN');
+The two killer queries:
+powershell# 1. "Find functions that look like this one" — paste a function in, get neighbours
+function Find-SimilarFunction {
+    param([Parameter(Mandatory)][string]$FunctionText, [int]$Top = 10)
+
+    $sql = @"
+DECLARE @q VECTOR(1536) =
+    AI_GENERATE_EMBEDDINGS(@text USE MODEL EmbeddingModel);
+
+SELECT TOP (@top) f.FilePath, f.FunctionName, f.ParamSignature, s.distance
+FROM   VECTOR_SEARCH(
+           TABLE      = dbo.ScriptFunction AS f,
+           COLUMN     = Embedding,
+           SIMILAR_TO = @q,
+           METRIC     = 'cosine',
+           TOP_N      = @top) AS s
+ORDER BY s.distance;
+"@
+    Invoke-DbaQuery -SqlInstance 'localhost' -Database 'AIDemo' -Query $sql `
+        -SqlParameter @{ text = $FunctionText; top = $Top }
+}
+
+# 2. "Find near-duplicates across the entire estate" — self-join on similarity
+$sql = @"
+WITH Pairs AS (
+    SELECT a.FunctionId AS IdA, b.FunctionId AS IdB,
+           a.FunctionName AS NameA, b.FunctionName AS NameB,
+           a.FilePath AS PathA, b.FilePath AS PathB,
+           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS Distance
+    FROM dbo.ScriptFunction a
+    JOIN dbo.ScriptFunction b
+      ON a.FunctionId < b.FunctionId
+)
+SELECT *
+FROM Pairs
+WHERE Distance < 0.15        -- tune this live on stage
+ORDER BY Distance;
+"@
+Invoke-DbaQuery -SqlInstance 'localhost' -Database 'AIDemo' -Query $sql
+Stage notes: Have a couple of seeded near-duplicates in your sample repo with deliberately different names (Get-LastBackupAge vs Test-BackupRecency doing the same thing) — when those float to the top it sells the idea instantly. Tune the threshold live; sliding it from 0.05 to 0.30 and watching the pairs appear is genuinely fun to watch. For a closer, run query #1 against the body of Find-CmdletByMeaning from Demo 1 and let the audience see your own demo code matching itself across files.
