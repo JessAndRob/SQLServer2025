@@ -87,8 +87,8 @@ while ($true) {
     if ($currentPending -eq 0) { break }
 
     if ($currentPending -ge $lastPending) {
-        Write-PSFMessage -Level Significant -Message ("Batch {0}: touched {1} rows but pending unchanged at {2} (likely throttled). Sleeping 2 min." -f $batch, $batchCount, $currentPending)
-        Start-Sleep -Seconds 120
+        Write-PSFMessage -Level Significant -Message ("Batch {0}: touched {1} rows but pending unchanged at {2} (likely throttled). Sleeping 5 min." -f $batch, $batchCount, $currentPending)
+        Start-Sleep -Seconds 300
         continue
     }
 
