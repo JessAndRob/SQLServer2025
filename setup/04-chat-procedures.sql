@@ -1,11 +1,21 @@
 -- =====================================================================
--- Parameters — override from setup\05-deploy-chat-procedures.ps1, or
--- run this file in SSMS in sqlcmd mode to use the defaults below.
+-- Parameters — mirror the names used by setup\02-database.sql so the
+-- credential created there is the credential referenced here.
+--
+--   OpenAIUri      → the database scoped credential's *name* (and the base
+--                    URI). Must match exactly what 02-database.sql created.
+--   ChatEndpoint   → the full chat-completions URL (cf. 02's OpenAIEndpoint
+--                    which is the full embeddings URL).
+--   ChatDeployment → the model name sent in the JSON body of the request
+--                    (cf. 02's EmbeddingDeployment).
+--
+-- Override from setup\05-deploy-chat-procedures.ps1, or run this file in
+-- SSMS in sqlcmd mode to use the defaults below.
 -- =====================================================================
 :setvar DatabaseName    "pwsh-scripts-🤣"
-:setvar OpenAIEndpoint  "https://your-aoai.openai.azure.com"
+:setvar OpenAIUri       "https://snover-ai.openai.azure.com/"
+:setvar ChatEndpoint    "https://snover-ai.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01"
 :setvar ChatDeployment  "gpt-4o-mini"
-:setvar ChatApiVersion  "2024-02-01"
 
 USE [$(DatabaseName)];
 GO
@@ -64,9 +74,9 @@ Keep the whole response under 200 words.';
 
     DECLARE @response NVARCHAR(MAX), @ret INT;
     EXEC @ret = sp_invoke_external_rest_endpoint
-        @url        = N'$(OpenAIEndpoint)/openai/deployments/$(ChatDeployment)/chat/completions?api-version=$(ChatApiVersion)',
+        @url        = N'$(ChatEndpoint)',
         @method     = 'POST',
-        @credential = [$(OpenAIEndpoint)],
+        @credential = [$(OpenAIUri)],
         @payload    = @payload,
         @response   = @response OUTPUT;
 
@@ -87,8 +97,9 @@ GO
 --     "more context = better summary". That's the policy violation.
 --     Once those values are in the prompt, any injected instruction can
 --     ask the model to relay them back.
---   * Same model + same endpoint as the defended proc — to make the point
---     that the model isn't the problem; the prompt envelope is.
+--   * Same model + same endpoint + same credential as the defended proc —
+--     to make the point that the model isn't the problem; the prompt
+--     envelope is.
 -- =====================================================================
 CREATE PROCEDURE dbo.SummariseFeedbackWithNames
 AS
@@ -123,9 +134,9 @@ BEGIN
 
     DECLARE @response NVARCHAR(MAX), @ret INT;
     EXEC @ret = sp_invoke_external_rest_endpoint
-        @url        = N'$(OpenAIEndpoint)/openai/deployments/$(ChatDeployment)/chat/completions?api-version=$(ChatApiVersion)',
+        @url        = N'$(ChatEndpoint)',
         @method     = 'POST',
-        @credential = [$(OpenAIEndpoint)],
+        @credential = [$(OpenAIUri)],
         @payload    = @payload,
         @response   = @response OUTPUT;
 
