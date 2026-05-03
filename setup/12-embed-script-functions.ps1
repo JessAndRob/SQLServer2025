@@ -55,9 +55,11 @@ OUTPUT INSERTED.FunctionId
 WHERE  Embedding IS NULL;
 "@
 
-$batch = 0
-$done  = 0
-$start = Get-Date
+$pendingSql = 'SELECT COUNT(*) AS Pending FROM dbo.ScriptFunction WHERE Embedding IS NULL;'
+
+$batch       = 0
+$start       = Get-Date
+$lastPending = $counts.Pending
 
 while ($true) {
     if ($MaxBatches -and $batch -ge $MaxBatches) {
@@ -77,20 +79,36 @@ while ($true) {
     $batchCount = @($result).Count
     if ($batchCount -eq 0) { break }
 
-    $done  += $batchCount
     $batch += 1
 
+    # OUTPUT count is rows touched, not rows actually embedded — AI_GENERATE_EMBEDDINGS
+    # returns NULL on throttling/failure, leaving Embedding IS NULL. Re-query to see real progress.
+    $currentPending = (Invoke-DbaQuery @queryDefaults -Query $pendingSql).Pending
+    if ($currentPending -eq 0) { break }
+
+    if ($currentPending -ge $lastPending) {
+        Write-PSFMessage -Level Warning -Message ("Batch {0}: touched {1} rows but pending unchanged at {2} (likely throttled). Sleeping 2 min." -f $batch, $batchCount, $currentPending)
+        Start-Sleep -Seconds 120
+        continue
+    }
+
+    $done         = $counts.Pending - $currentPending
     $batchElapsed = (Get-Date) - $batchStart
-    $rate = if ($batchElapsed.TotalSeconds -gt 0) { '{0:N1}' -f ($batchCount / $batchElapsed.TotalSeconds) } else { '?' }
-    $eta  = if ($done -gt 0) {
+    $progress     = $lastPending - $currentPending
+    $rate         = if ($batchElapsed.TotalSeconds -gt 0) { '{0:N1}' -f ($progress / $batchElapsed.TotalSeconds) } else { '?' }
+    $eta          = if ($done -gt 0) {
         $perRow = ((Get-Date) - $start).TotalSeconds / $done
-        $remain = ($counts.Pending - $done) * $perRow
+        $remain = $currentPending * $perRow
         '{0:N1} min' -f ($remain / 60)
     } else { '?' }
 
-    Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} ({2} rows/s) — {3}/{4} done, ETA {5}" -f $batch, $batchCount, $rate, $done, $counts.Pending, $eta)
+    Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} embedded ({2} rows/s) — {3}/{4} done, ETA {5}" -f $batch, $progress, $rate, $done, $counts.Pending, $eta)
+
+    $lastPending = $currentPending
 }
 
-$elapsed = (Get-Date) - $start
-Write-PSFMessage -Level Host -Message ("Done. Embedded {0} rows in {1:N1} min." -f $done, $elapsed.TotalMinutes)
+$elapsed    = (Get-Date) - $start
+$finalPending = (Invoke-DbaQuery @queryDefaults -Query $pendingSql).Pending
+$embedded   = $counts.Pending - $finalPending
+Write-PSFMessage -Level Host -Message ("Done. Embedded {0} rows in {1:N1} min ({2} still pending)." -f $embedded, $elapsed.TotalMinutes, $finalPending)
 Write-PSFMessage -Level Host -Message "Next: .\13-create-vector-index.ps1"
