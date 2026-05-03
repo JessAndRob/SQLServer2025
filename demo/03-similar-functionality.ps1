@@ -121,6 +121,9 @@ function Test-StaleFile {
     return $age.TotalDays -gt $Days
 }
 '@
+Write-PSFMessage -Level Host -Message "Here's the function we're going to search for:"
+Write-PSFMessage -Level Host -Message $query
+Read-Host "Press Enter to search for similar functions across the corpus"
 
 Find-SimilarFunction -FunctionText $query -Top 10 | Format-Table -AutoSize -Wrap
 
@@ -158,6 +161,10 @@ FROM Pairs
 WHERE Distance < 0.15
 ORDER BY Distance;
 '@
+
+Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
+Read-Host "Press Enter to find near-duplicates across the corpus"
+
 Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
 
 # Audience: "Top of the list: probably-actual-duplicates. Different repos,
