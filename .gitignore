@@ -1,0 +1,7 @@
+# Cloned PowerShell corpus for demo 3 (setup\08-clone-repos.ps1).
+# Hundreds of MB of third-party repos — never check this in.
+scripts-corpus/
+
+# Database backups produced by setup\14-backup-database.ps1.
+# Compressed .bak files can still be hundreds of MB.
+backups/
