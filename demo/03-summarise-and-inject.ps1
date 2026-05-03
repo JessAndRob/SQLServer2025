@@ -80,6 +80,8 @@ Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseNam
 # dozen customers across the PowerShell community, each leaving a few
 # comments. Let's have a look at who's in there."
 
+Write-PSFMessage -Level Host -Message "Here's a sample of the customers who left feedback:"
+
 $customerSampleQuery = @'
 SELECT TOP 8 CustomerId, Name, Email
 FROM dbo.Customers
@@ -92,6 +94,8 @@ Invoke-DbaQuery @queryDefaults -Query $customerSampleQuery | Format-Table -AutoS
 
 # Audience: "Familiar faces. Now one piece of feedback from each of them so
 # you get a feel for the kind of thing that's in the table."
+
+Write-PSFMessage -Level Host -Message "And here's a sample of the feedback they left:"
 
 $feedbackPerPersonQuery = @'
 WITH FirstComment AS (
@@ -116,7 +120,9 @@ Invoke-DbaQuery @queryDefaults -Query $feedbackPerPersonQuery | Format-Table -Au
 # typical post-release feedback. There are about a hundred rows in total —
 # more than we want to read top to bottom in a meeting."
 
-Read-Host "Press Enter to summarise the feedback with SQL Server 2025"
+Write-PSFMessage -Level Host -Message "Lets use SQL Server 2025 to summarise this feedback for the PM, so they can scan it in fifteen seconds instead of reading a hundred rows by using Azure OpenAI's text-embedding-3-small model. "
+
+Read-Host "Press Enter to summarise the feedback"
 # endregion
 
 
@@ -142,7 +148,9 @@ Write-PSFMessage -Level Host -Message "-------------------"
 # scan in fifteen seconds instead of reading a hundred rows. That's the
 # headline feature."
 
-Read-Host "Press Enter to try a richer version that includes customer names"
+Write-PSFMessage -Level Host -Message "That summary came from the text-embedding-3-small model in Azure OpenAI. It's the same model we have access to in PowerShell with the Azure.AI.OpenAI module — but here we're calling it directly from SQL Server attached directly to our data. No middle layer, no glue code, just T-SQL. Cool, right?"
+
+Read-Host "More Feedback has come in since we ran that summary. The PM can run the Function again to get the latest insights."
 # endregion
 
 
@@ -216,7 +224,7 @@ Write-PSFMessage -Level Host -Message "-------------------"
 # it has in its context — exactly what Justin's fake "SYSTEM UPDATE" asked
 # for. If the model adds something different (a banner, a different format),
 # lean into whatever it did: "It... did what the feedback told it to do."
-
+Read-Host "Press Enter"
 Read-Host "Press Enter to investigate what happened"
 # endregion
 
@@ -227,6 +235,8 @@ Read-Host "Press Enter to investigate what happened"
 # Audience: "So that wasn't a summary. Let's look at what's actually in the
 # feedback. We've got a hundred-and-one rows in there now. Let's pull the
 # one that landed most recently and see what it looks like."
+
+Write-PSFMessage -Level Host -Message "Here's the row that caused the chaos in the summary:"
 
 $justinRowQuery = @"
 SELECT c.Name, f.FeedbackId, f.Comment
