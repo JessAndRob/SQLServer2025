@@ -71,7 +71,7 @@ while ($true) {
     try {
         $result = Invoke-DbaQuery @queryDefaults -Query $updateSql -EnableException
     } catch {
-        Write-PSFMessage -Level Warning -Message ("Batch {0} failed: {1}. Sleeping 5s and retrying." -f ($batch + 1), $_.Exception.Message)
+        Write-PSFMessage -Level Significant -Message ("Batch {0} failed: {1}. Sleeping 5s and retrying." -f ($batch + 1), $_.Exception.Message)
         Start-Sleep -Seconds 5
         continue
     }
@@ -87,7 +87,7 @@ while ($true) {
     if ($currentPending -eq 0) { break }
 
     if ($currentPending -ge $lastPending) {
-        Write-PSFMessage -Level Warning -Message ("Batch {0}: touched {1} rows but pending unchanged at {2} (likely throttled). Sleeping 2 min." -f $batch, $batchCount, $currentPending)
+        Write-PSFMessage -Level Significant -Message ("Batch {0}: touched {1} rows but pending unchanged at {2} (likely throttled). Sleeping 2 min." -f $batch, $batchCount, $currentPending)
         Start-Sleep -Seconds 120
         continue
     }
