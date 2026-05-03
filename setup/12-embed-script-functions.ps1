@@ -102,7 +102,8 @@ while ($true) {
         '{0:N1} min' -f ($remain / 60)
     } else { '?' }
 
-    Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} embedded ({2} rows/s) — {3}/{4} done, ETA {5}" -f $batch, $progress, $rate, $done, $counts.Pending, $eta)
+     Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} embedded ({2} rows/s) — {3}/{4} done, {6} to complete ETA {5}" -f $batch, $progress, $rate, $done, $counts.Pending, $eta,$currentPending )
+
 
     $lastPending = $currentPending
 }
