@@ -19,7 +19,7 @@ param(
     [pscredential] $SqlCredential = (New-Object pscredential -ArgumentList 'sa', (Get-Secret dbapassword)),
     [string] $DatabaseName = 'pwsh-scripts-🤣',
 
-    [int] $BatchSize = 50,
+    [int] $BatchSize = 25,
     [int] $MaxBatches               # optional cap (smoke testing)
 )
 
@@ -102,10 +102,10 @@ while ($true) {
         '{0:N1} min' -f ($remain / 60)
     } else { '?' }
 
-     Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} embedded ({2} rows/s) — {3}/{4} done, {6} to complete ETA {5}" -f $batch, $progress, $rate, $done, $counts.Pending, $eta,$currentPending )
-
+    Write-PSFMessage -Level Host -Message ("Batch {0}: +{1} embedded ({2} rows/s) — {3}/{4} done, {6} to complete ETA {5}" -f $batch, $progress, $rate, $done, $counts.Pending, $eta,$currentPending )
 
     $lastPending = $currentPending
+    Start-Sleep -Seconds 30
 }
 
 $elapsed    = (Get-Date) - $start
