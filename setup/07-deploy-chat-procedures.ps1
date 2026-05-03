@@ -1,6 +1,6 @@
 #requires -Modules dbatools, PSFramework
 
-# Deploys setup\04-chat-procedures.sql (the SummariseFeedback +
+# Deploys setup\06-chat-procedures.sql (the SummariseFeedback +
 # SummariseFeedbackWithNames procs) into the demo database.
 #
 # Important: this must produce the SAME OpenAIUri value that
@@ -35,7 +35,7 @@ Write-PSFMessage -Level Host -Message "OpenAIUri (credential name): $Uri"
 Write-PSFMessage -Level Host -Message "ChatEndpoint:                $ChatEndpoint"
 Write-PSFMessage -Level Host -Message "ChatDeployment:              $ChatDeployment"
 
-$scriptPath = Join-Path $PSScriptRoot '04-chat-procedures.sql'
+$scriptPath = Join-Path $PSScriptRoot '06-chat-procedures.sql'
 Write-PSFMessage -Level Verbose -Message "Loading T-SQL from $scriptPath"
 $sql = Get-Content -Path $scriptPath -Raw
 
