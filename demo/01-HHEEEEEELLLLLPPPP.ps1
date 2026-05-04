@@ -1,42 +1,39 @@
-$SqlInstance = '10.10.10.65'
-$DatabaseName = 'pwsh-scripts-🤣'
-$SqlCredential = (New-Object pscredential -ArgumentList 'sa', (Get-Secret dbapassword))
+#requires -Modules dbatools, PSFramework
 
-$Connection = Connect-DbaInstance -SqlInstance $SqlInstance -SqlCredential $SqlCredential
+# =============================================================================
+# Demo 01 — "HHEEEEEELLLLLPPPP"
+#
+# Setup for this demo now lives in setup\03-deploy-database.ps1 so this file
+# can stay stage-fast: connect, ask a question, get relevant cmdlets.
+# =============================================================================
 
-$cmdlets = Get-Command -CommandType Cmdlet, Function |Where-Object { $_.HelpUri -or $_.Description }
+# -----------------------------------------------------------------------------
+# region : Connection
+# -----------------------------------------------------------------------------
+$SqlInstance   = '10.10.10.65'
+$DatabaseName  = 'pwsh-scripts-🤣'
+$SqlCredential = New-Object pscredential -ArgumentList 'sa', (Get-Secret dbapassword)
 
-$cmdlets.count
-
-$rows = foreach ($c in $cmdlets) {
-    $help = Get-Help $c.Name -ErrorAction SilentlyContinue
-    if (-not $help) { continue }
-
-    [PSCustomObject]@{
-        Name        = $c.Name
-        ModuleName  = $c.ModuleName
-        Synopsis    = ($help.Synopsis    | Out-String).Trim()
-        Description = ($help.Description | Out-String).Trim()
-        SearchText  = "$($c.Name). $($help.Synopsis) $($help.Description)" -replace '\s+', ' '
-    }
+$connectParams = @{
+    SqlInstance   = $SqlInstance
+    SqlCredential = $SqlCredential
 }
+$Connection = Connect-DbaInstance @connectParams
 
-# Bulk insert via Write-DbaDbTableData
-$rows | Write-DbaDbTableData -SqlInstance $Connection -Database $DatabaseName -Table CmdletHelp -AutoCreateTable:$false
-
-$query = "SELECT TOP 3 * FROM CmdletHelp"
-Invoke-DbaQuery -SqlInstance $Connection -Database $DatabaseName -Query $query
-
-$UpdateEmbeddingsParams = @{
+$queryDefaults = @{
     SqlInstance = $Connection
     Database    = $DatabaseName
-    Query       = 'UPDATE dbo.CmdletHelp
-SET Embedding = AI_GENERATE_EMBEDDINGS(SearchText USE MODEL EmbeddingModel)
-WHERE Embedding IS NULL;'
 }
-Invoke-DbaQuery @UpdateEmbeddingsParams
 
+Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
+# endregion
+
+
+# -----------------------------------------------------------------------------
+# region : Act 1 — find cmdlets by meaning
+# -----------------------------------------------------------------------------
 function Find-CmdletByMeaning {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [string] $Question,
         [int] $Top = 5
@@ -56,10 +53,22 @@ WHERE Embedding IS NOT NULL
 ORDER BY Distance;
 "@
 
-    Invoke-DbaQuery -SqlInstance 'localhost' -Database 'AIDemo' -Query $sql `
-        -SqlParameter @{ question = $Question; top = $Top }
+    $params = $queryDefaults.Clone()
+    $params.Query = $sql
+    $params.SqlParameter = @{ question = $Question; top = $Top }
+    Invoke-DbaQuery @params
 }
 
-Find-CmdletByMeaning "I need to read a file line by line"
-Find-CmdletByMeaning "how do I parse JSON"
-Find-CmdletByMeaning "wait until a job finishes"
+Write-PSFMessage -Level Host -Message "Question: I need to read a file line by line"
+Find-CmdletByMeaning -Question 'I need to read a file line by line' -Top 5 | Format-Table -AutoSize -Wrap
+
+Read-Host "Press Enter for the next question"
+
+Write-PSFMessage -Level Host -Message "Question: how do I parse JSON"
+Find-CmdletByMeaning -Question 'how do I parse JSON' -Top 5 | Format-Table -AutoSize -Wrap
+
+Read-Host "Press Enter for the next question"
+
+Write-PSFMessage -Level Host -Message "Question: wait until a job finishes"
+Find-CmdletByMeaning -Question 'wait until a job finishes' -Top 5 | Format-Table -AutoSize -Wrap
+# endregion

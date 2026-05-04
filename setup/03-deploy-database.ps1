@@ -18,6 +18,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$connectParams = @{
+    SqlInstance = $SqlInstance
+}
+if ($SqlCredential) { $connectParams.SqlCredential = $SqlCredential }
+$Connection = Connect-DbaInstance @connectParams
+
 Write-PSFMessage -Level Host -Message "Deploying [$DatabaseName] to $SqlInstance"
 
 # Pull the bits we stashed in 00-openai.ps1
@@ -60,18 +66,57 @@ Write-PSFMessage -Level Verbose -Message "Substituted $($token) sqlcmd token wit
 Write-PSFMessage -Level Verbose -Message "Substituted $($tokens.Count) sqlcmd tokens"
 
 $queryParams = @{
-    SqlInstance     = $SqlInstance
+    SqlInstance     = $Connection
     Database        = 'master'
     Query           = $sql
     EnableException = $true
 }
-if ($SqlCredential) { $queryParams.SqlCredential = $SqlCredential }
 
 Write-PSFMessage -Level Host -Message $sql
 
 Write-PSFMessage -Level Host -Message "Running deployment script against $SqlInstance"
 Invoke-DbaQuery @queryParams
 
+Write-PSFMessage -Level Host -Message "Preparing cmdlet help corpus in dbo.CmdletHelp"
+
+$cmdlets = Get-Command -CommandType Cmdlet, Function | Where-Object { $_.HelpUri -or $_.Description }
+Write-PSFMessage -Level Host -Message "Found $($cmdlets.Count) commands to inspect"
+
+$rows = foreach ($c in $cmdlets) {
+    $help = Get-Help $c.Name -ErrorAction SilentlyContinue
+    if (-not $help) { continue }
+
+    [PSCustomObject]@{
+        Name        = $c.Name
+        ModuleName  = $c.ModuleName
+        Synopsis    = ($help.Synopsis | Out-String).Trim()
+        Description = ($help.Description | Out-String).Trim()
+        SearchText  = "$($c.Name). $($help.Synopsis) $($help.Description)" -replace '\s+', ' '
+    }
+}
+
+Write-PSFMessage -Level Host -Message "Writing $($rows.Count) cmdlet help rows to dbo.CmdletHelp"
+
+$writeTableParams = @{
+    SqlInstance     = $Connection
+    Database        = $DatabaseName
+    Table           = 'CmdletHelp'
+    AutoCreateTable = $false
+}
+$rows | Write-DbaDbTableData @writeTableParams
+
+$updateEmbeddingsParams = @{
+    SqlInstance = $Connection
+    Database    = $DatabaseName
+    Query       = @'
+UPDATE dbo.CmdletHelp
+SET Embedding = AI_GENERATE_EMBEDDINGS(SearchText USE MODEL EmbeddingModel)
+WHERE Embedding IS NULL;
+'@
+}
+Write-PSFMessage -Level Host -Message "Generating embeddings for cmdlet help rows"
+Invoke-DbaQuery @updateEmbeddingsParams | Out-Null
+
 Write-PSFMessage -Level Host -Message "Deployed [$DatabaseName] on $SqlInstance"
 Write-PSFMessage -Level Host -Message "EmbeddingModel -> $endpoint/openai/deployments/$deployment"
-Write-PSFMessage -Level Host -Message "Table dbo.CmdletHelp recreated empty and ready for embeddings"
+Write-PSFMessage -Level Host -Message "Table dbo.CmdletHelp loaded and embedded"
