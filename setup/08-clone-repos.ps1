@@ -29,7 +29,6 @@ param(
         'JustinGrote',          # Justin Grote
         'jdhitsolutions',       # Jeff Hicks
         'KevinMarquette',       # Kevin Marquette
-        'dfinke',               # Doug Finke
         'adamdriscoll',         # Adam Driscoll
         'jhoneill',             # James O'Neill
         'jaapbrasser',          # Jaap Brasser
@@ -54,7 +53,18 @@ param(
         'MicrosoftDocs/PowerShell-Docs',
         'PowerShell/Modules',
         'pester/Pester',
-        'dataplat/dbatools'
+        'dataplat/dbatools',
+        '/gustavo1999/powershell-delete-duplicate-files',
+        'scriptrunner/PoShCrashCourse',
+        'EvotecIT/PSFilePermissions',
+        'jpomfret/Scripts',
+        'DarwinJS/Start-Demo',
+        '/SQLDBAWithABeard/OldCodeFromBlog'
+        'Jaykul/powershell-1',
+        '/jaapbrasser/UtilityScripts',
+        'fleschutz/PowerShell',
+        'MScholtes/TechNet-Gallery',
+        'psjamesp/MOL-Scripting'
     ),
 
     # Optional GitHub PAT — raises rate limit from 60 to 5,000 requests/hr.
@@ -93,15 +103,15 @@ function Get-PowerShellRepo {
     }
 
     $repos |
-        Where-Object { -not $_.fork -and -not $_.archived } |
-        Where-Object { $_.language -eq 'PowerShell' -or $_.name -match 'PowerShell|Posh|PSh' } |
-        Select-Object -First $Max |
-        ForEach-Object {
-            [pscustomobject]@{
-                Url  = $_.clone_url
-                Slug = "$User`_$($_.name)"
-            }
+    Where-Object { -not $_.fork -and -not $_.archived } |
+    Where-Object { $_.language -eq 'PowerShell' -or $_.name -match 'PowerShell|Posh|PSh' } |
+    Select-Object -First $Max |
+    ForEach-Object {
+        [pscustomobject]@{
+            Url  = $_.clone_url
+            Slug = "$User`_$($_.name)"
         }
+    }
 }
 
 # Build the full list of repos to clone

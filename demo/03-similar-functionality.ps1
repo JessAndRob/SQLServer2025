@@ -110,7 +110,8 @@ ORDER BY s.distance;
 # Audience: "Let's try a function the audience can guess at. 'Is this file
 # older than N days' — the kind of thing every monitoring script reinvents."
 
-$query = @'
+$demoFunctions = [ordered]@{
+    StaleFile = @'
 function Test-StaleFile {
     param(
         [Parameter(Mandatory)] [string] $Path,
@@ -121,11 +122,87 @@ function Test-StaleFile {
     return $age.TotalDays -gt $Days
 }
 '@
-Write-PSFMessage -Level Host -Message "Here's the function we're going to search for:"
-Write-PSFMessage -Level Host -Message $query
-Read-Host "Press Enter to search for similar functions across the corpus"
 
-Find-SimilarFunction -FunctionText $query -Top 10 | Format-Table -AutoSize -Wrap
+    JsonRead = @'
+function Read-ConfigJson {
+    param([Parameter(Mandatory)] [string] $Path)
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Config file not found: $Path"
+    }
+    (Get-Content -LiteralPath $Path -Raw) | ConvertFrom-Json
+}
+'@
+
+    CsvExport = @'
+function Export-ErrorReport {
+    param(
+        [Parameter(Mandatory)] [object[]] $InputObject,
+        [Parameter(Mandatory)] [string] $Path
+    )
+    $InputObject |
+        Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message |
+        Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8
+}
+'@
+
+    RetryWrapper = @'
+function Invoke-WithRetry {
+    param(
+        [Parameter(Mandatory)] [scriptblock] $ScriptBlock,
+        [int] $RetryCount = 3,
+        [int] $DelaySeconds = 2
+    )
+    for ($i = 0; $i -lt $RetryCount; $i++) {
+        try { return & $ScriptBlock }
+        catch {
+            if ($i -eq ($RetryCount - 1)) { throw }
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+}
+'@
+}
+
+# Audience: "Let's make this interactive. You pick the kind of function,
+# and we'll see what neighbours the model finds."
+
+$demoFunctionKeys = @($demoFunctions.Keys)
+$continueAct1 = $true
+
+while ($continueAct1) {
+    Write-PSFMessage -Level Host -Message ''
+    Write-PSFMessage -Level Host -Message 'Pick a function sample to search:'
+    for ($i = 0; $i -lt $demoFunctionKeys.Count; $i++) {
+        Write-PSFMessage -Level Host -Message ("  [{0}] {1}" -f ($i + 1), $demoFunctionKeys[$i])
+    }
+    Write-PSFMessage -Level Host -Message "  [N] Move to next act"
+
+    $choice = (Read-Host 'Choose 1-4 or N').Trim().ToUpperInvariant()
+    if ($choice -eq 'N') { break }
+
+    $selectedIndex = 0
+    if (-not [int]::TryParse($choice, [ref]$selectedIndex)) {
+        Write-PSFMessage -Level Warning -Message "Invalid choice '$choice'. Pick 1-4 or N."
+        continue
+    }
+    if ($selectedIndex -lt 1 -or $selectedIndex -gt $demoFunctionKeys.Count) {
+        Write-PSFMessage -Level Warning -Message "Choice '$selectedIndex' is out of range. Pick 1-$($demoFunctionKeys.Count)."
+        continue
+    }
+
+    $selectedDemoFunction = $demoFunctionKeys[$selectedIndex - 1]
+    $query = $demoFunctions[$selectedDemoFunction]
+
+    Write-PSFMessage -Level Host -Message "Selected: $selectedDemoFunction"
+    Write-PSFMessage -Level Host -Message "Here's the function we're going to search for:"
+    Write-PSFMessage -Level Host -Message $query
+    Read-Host 'Press Enter to search for similar functions across the corpus'
+
+    Find-SimilarFunction -FunctionText $query -Top 10 | Format-Table -AutoSize -Wrap
+
+    $again = (Read-Host 'Run another sample? (Y/N)').Trim().ToUpperInvariant()
+    if ($again -ne 'Y') { $continueAct1 = $false }
+}
 
 # Audience: "Look at the names — Test-FileAge, Get-StaleBackups,
 # Check-LogRotation, whatever floats up. Every one of those was written
