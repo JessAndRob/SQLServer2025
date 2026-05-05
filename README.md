@@ -21,6 +21,9 @@ Video here:[data unattended videos](https://www.youtube.com/playlist?list=PLLq_t
 <img width="994" height="487" alt="image" src="https://github.com/user-attachments/assets/f2ba9385-02f1-42e4-a6dd-1715c5a5e9ac" />
 <img width="1111" height="661" alt="image" src="https://github.com/user-attachments/assets/2925986c-4066-4c9e-9d45-1408f9575d1f" />
 
+<img width="2008" height="1128" alt="image" src="https://github.com/user-attachments/assets/e8e01224-a1a4-4698-8d37-81050dbcc8ad" />
+
+
 Here are some demo ideas, ranked roughly by "conference wow factor" and how well they tie back to your abstract's promise of showing both the power and the risks:
 The meta one (audience will love this)
 Build a semantic search over PowerShell itself. Pipe Get-Help output for every cmdlet on the box (or all of PSGallery) into SQL Server 2025, generate embeddings with AI_GENERATE_EMBEDDINGS, then let people ask natural language questions like "how do I read a file line by line" or "what's the cmdlet for parsing JSON." It's incredibly on-brand for PSConfEU and shows the whole pipeline — PowerShell ingests, SQL embeds and searches, PowerShell consumes the results.
