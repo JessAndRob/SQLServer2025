@@ -84,6 +84,29 @@ function Get-ScriptFunctionRow {
             "$type `$$($_.Name.VariablePath.UserPath)"
         }
 
+        $repoFolder = [string]::Empty
+        $ownerName = [string]::Empty
+        $repoName = [string]::Empty
+        $marker = 'scripts-corpus\'
+        $markerIndex = $File.FullName.IndexOf($marker, [StringComparison]::OrdinalIgnoreCase)
+        if ($markerIndex -ge 0) {
+            $repoStart = $markerIndex + $marker.Length
+            $slashIndex = $File.FullName.IndexOf('\', $repoStart)
+            if ($slashIndex -gt $repoStart) {
+                $repoFolder = $File.FullName.Substring($repoStart, $slashIndex - $repoStart)
+            }
+        }
+
+        if ($repoFolder) {
+            $underscoreIndex = $repoFolder.IndexOf('_')
+            if ($underscoreIndex -gt 0) {
+                $ownerName = $repoFolder.Substring(0, $underscoreIndex)
+                $repoName = $repoFolder.Substring($underscoreIndex + 1)
+            } else {
+                $ownerName = $repoFolder
+            }
+        }
+
         $docComment = ($tokens | Where-Object {
             $_.Kind -eq 'Comment' -and
             $_.Extent.EndLineNumber -lt $fn.Extent.StartLineNumber
@@ -107,6 +130,8 @@ function Get-ScriptFunctionRow {
         [pscustomobject]@{
             FilePath       = $File.FullName
             FunctionName   = $fn.Name
+            OwnerName      = $ownerName
+            RepoName       = $repoName
             ParamSignature = ($params -join ', ')
             Body           = $bodyText
             DocComment     = $docComment

@@ -18,6 +18,8 @@ BEGIN
         FunctionId      INT IDENTITY PRIMARY KEY,
         FilePath        NVARCHAR(500),
         FunctionName    NVARCHAR(200),
+        OwnerName       NVARCHAR(200),
+        RepoName        NVARCHAR(300),
         ParamSignature  NVARCHAR(MAX),
         Body            NVARCHAR(MAX),
         DocComment      NVARCHAR(MAX),
