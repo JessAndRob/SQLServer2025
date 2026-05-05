@@ -42,7 +42,11 @@ param(
         'potatoqualitee',       # Chrissy LeMaire
         'SQLDBAWithABeard',     # Rob Sewell
         'jpomfret',             # Jess Pomfret
-        'EvotecIT'              # Przemyslaw Klys (org)
+        'EvotecIT',             # Przemyslaw Klys (org)
+        'psconfeu',             # PSConfEU org catch-all
+        'bgelens',
+        'iainbrighton',
+        'RichardSiddaway'
     ),
 
     # Classic / blog-referenced repos — explicit so we know exactly what
@@ -54,24 +58,30 @@ param(
         'PowerShell/Modules',
         'pester/Pester',
         'dataplat/dbatools',
-        '/gustavo1999/powershell-delete-duplicate-files',
+        'gustavo1999/powershell-delete-duplicate-files',
         'scriptrunner/PoShCrashCourse',
         'EvotecIT/PSFilePermissions',
         'jpomfret/Scripts',
         'DarwinJS/Start-Demo',
-        '/SQLDBAWithABeard/OldCodeFromBlog'
+        'SQLDBAWithABeard/OldCodeFromBlog',
         'Jaykul/powershell-1',
-        '/jaapbrasser/UtilityScripts',
+        'jaapbrasser/UtilityScripts',
         'fleschutz/PowerShell',
         'MScholtes/TechNet-Gallery',
-        'psjamesp/MOL-Scripting'
+        'psjamesp/MOL-Scripting',
+        # Older script-heavy collections that often give entertaining matches.
+        'lazywinadmin/PowerShell',
+        'jdhitsolutions/ISEScriptingGeek',
+        'RichardSiddaway/Blogcode',
+        'bgelens/BlogItems'
     ),
 
     # Optional GitHub PAT — raises rate limit from 60 to 5,000 requests/hr.
     # Useful if you've recently been hammering api.github.com from this box.
     [string] $GitHubToken,
 
-    [int]    $MaxReposPerUser = 25,
+    [int]    $MaxNewestPerUser = 25,
+    [int]    $MaxOldestPerUser = 5,
     [switch] $PullExisting
 )
 
@@ -89,11 +99,13 @@ function Get-PowerShellRepo {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [string] $User,
-        [int] $Max
+        [int] $Max,
+        [ValidateSet('updated', 'created')] [string] $Sort = 'updated',
+        [ValidateSet('asc', 'desc')] [string] $Direction = 'desc'
     )
 
-    $uri = "https://api.github.com/users/$User/repos?per_page=100&sort=updated"
-    Write-PSFMessage -Level Verbose -Message "Listing repos for $User"
+    $uri = "https://api.github.com/users/$User/repos?per_page=100&sort=$Sort&direction=$Direction"
+    Write-PSFMessage -Level Verbose -Message "Listing repos for $User (sort=$Sort, direction=$Direction)"
 
     try {
         $repos = Invoke-RestMethod -Uri $uri -Headers $headers -ErrorAction Stop
@@ -115,9 +127,10 @@ function Get-PowerShellRepo {
 }
 
 # Build the full list of repos to clone
-Write-PSFMessage -Level Host -Message "Listing PowerShell repos for $($Speakers.Count) speakers..."
+Write-PSFMessage -Level Host -Message "Listing newest + oldest PowerShell repos for $($Speakers.Count) speakers..."
 $repoList = foreach ($user in $Speakers) {
-    Get-PowerShellRepo -User $user -Max $MaxReposPerUser
+    Get-PowerShellRepo -User $user -Max $MaxNewestPerUser -Sort updated -Direction desc
+    Get-PowerShellRepo -User $user -Max $MaxOldestPerUser -Sort created -Direction asc
 }
 
 Write-PSFMessage -Level Host -Message "Adding $($ClassicRepos.Count) classic repos..."
@@ -126,6 +139,12 @@ $repoList += foreach ($repo in $ClassicRepos) {
         Url  = "https://github.com/$repo.git"
         Slug = ($repo -replace '/', '_')
     }
+}
+
+# De-duplicate repos that appear in both newest/oldest/user/classic sets.
+$seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$repoList = foreach ($r in $repoList) {
+    if ($seen.Add($r.Slug)) { $r }
 }
 
 $total = @($repoList).Count
