@@ -26,23 +26,12 @@ $queryDefaults = @{
 if ($SqlCredential) { $queryDefaults.SqlCredential = $SqlCredential }
 
 $coveringIndexSql = @'
-IF NOT EXISTS (
-    SELECT 1 FROM sys.indexes
-    WHERE name = 'IX_ScriptFunction_FunctionId_Embedding'
-    AND object_id = OBJECT_ID(N'dbo.ScriptFunction')
-)
-BEGIN
-    CREATE INDEX IX_ScriptFunction_FunctionId_Embedding
-    ON dbo.ScriptFunction(FunctionId)
-    INCLUDE (FunctionName, FilePath, Embedding)
-    WHERE Embedding IS NOT NULL;
+DROP INDEX IF EXISTS IX_ScriptFunction_FunctionId_Embedding ON dbo.ScriptFunction;
 
-    PRINT 'Index IX_ScriptFunction_FunctionId_Embedding created successfully.';
-END
-ELSE
-BEGIN
-    PRINT 'Index IX_ScriptFunction_FunctionId_Embedding already exists.';
-END
+CREATE INDEX IX_ScriptFunction_FunctionId_Embedding
+ON dbo.ScriptFunction(FunctionId)
+INCLUDE (FunctionName, OwnerName, RepoName, FilePath, Embedding)
+WHERE Embedding IS NOT NULL;
 '@
 
 Write-PSFMessage -Level Host -Message "Creating covering filtered index for Near-Duplicates query..."
