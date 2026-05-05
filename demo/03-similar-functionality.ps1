@@ -146,20 +146,74 @@ Read-Host "Press Enter for the second query"
 # pairing each row with itself and prevents (A, B) and (B, A) duplicates."
 
 $dupesQuery = @'
-WITH Pairs AS (
-    SELECT a.FunctionId AS IdA,   b.FunctionId AS IdB,
-           a.FunctionName AS NameA, b.FunctionName AS NameB,
-           a.FilePath AS PathA,     b.FilePath AS PathB,
-           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS Distance
-    FROM dbo.ScriptFunction a
-    JOIN dbo.ScriptFunction b ON a.FunctionId < b.FunctionId
+WITH RepoExtract AS (
+    SELECT
+        FunctionId,
+        FunctionName,
+        FilePath,
+        Embedding,
+        -- Extract repo folder (e.g., "EvotecIT_ADEssentials" from path)
+        SUBSTRING(FilePath,
+            CHARINDEX('scripts-corpus\', FilePath) + LEN('scripts-corpus\'),
+            CHARINDEX('\', FilePath, CHARINDEX('scripts-corpus\', FilePath) + LEN('scripts-corpus\') + 1) -
+            (CHARINDEX('scripts-corpus\', FilePath) + LEN('scripts-corpus\'))) AS RepoFolder
+    FROM dbo.ScriptFunction
+),
+RepoWithOwner AS (
+    SELECT
+        FunctionId,
+        FunctionName,
+        FilePath,
+        Embedding,
+        RepoFolder,
+        -- Extract owner (part before underscore)
+        CASE
+            WHEN CHARINDEX('_', RepoFolder) > 0
+            THEN LEFT(RepoFolder, CHARINDEX('_', RepoFolder) - 1)
+            ELSE RepoFolder
+        END AS Owner,
+        -- Extract repo name (part after underscore)
+        CASE
+            WHEN CHARINDEX('_', RepoFolder) > 0
+            THEN SUBSTRING(RepoFolder, CHARINDEX('_', RepoFolder) + 1, 8000)
+            ELSE ''
+        END AS RepoName
+    FROM RepoExtract
+),
+Pairs AS (
+    SELECT a.FunctionId AS IdA,
+           b.FunctionId AS IdB,
+           a.FunctionName AS FunctionNameA,
+           b.FunctionName AS FunctionNameB,
+           a.Owner AS OwnerA,
+           b.Owner AS OwnerB,
+           a.RepoName AS RepoNameA,
+           b.RepoName AS RepoNameB,
+           a.FilePath AS PathA,
+           b.FilePath AS PathB,
+           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
+    FROM RepoWithOwner a
+    JOIN RepoWithOwner b ON a.FunctionId < b.FunctionId
     WHERE a.Embedding IS NOT NULL
       AND b.Embedding IS NOT NULL
 )
-SELECT TOP 20 *
+SELECT TOP 20
+    IdA,
+    IdB,
+    FunctionNameA,
+    FunctionNameB,
+    OwnerA,
+    OwnerB,
+    RepoNameA,
+    RepoNameB,
+    PathA,
+    PathB,
+    SimilarityDistance
 FROM Pairs
-WHERE Distance < 0.15
-ORDER BY Distance;
+WHERE SimilarityDistance < 0.15
+    AND FunctionNameA <> FunctionNameB
+    AND OwnerA <> OwnerB
+ORDER BY SimilarityDistance;
 '@
 
 Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
