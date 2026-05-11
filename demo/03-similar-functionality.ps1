@@ -190,7 +190,7 @@ SELECT TOP (@top)
     f.FunctionName,
     f.OwnerName,
     f.RepoName,
-    f.ParamSignature,
+   -- f.ParamSignature,
     s.distance
 FROM   VECTOR_SEARCH(
            TABLE      = dbo.ScriptFunction AS f,
