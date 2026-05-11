@@ -235,10 +235,53 @@ WITH Pairs AS (
            a.FilePath AS PathA,
            b.FilePath AS PathB,
            VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
-    FROM dbo.ScriptFunction a
-    JOIN dbo.ScriptFunction b ON a.FunctionId < b.FunctionId
-    WHERE a.Embedding IS NOT NULL
-      AND b.Embedding IS NOT NULL
+    FROM (SELECT TOP 5000 * FROM dbo.ScriptFunction ORDER BY FunctionId) a
+    JOIN (SELECT TOP 5000 * FROM dbo.ScriptFunction ORDER BY FunctionId) b ON a.FunctionId <> b.FunctionId
+    WHERE
+        a.FunctionId NOT IN (
+1435   , -- Clear-GroupMembers
+674       , -- Clear-GroupMembers
+1837,    -- Get-CommandTreeCompletion
+1837,    -- Get-CommandTreeCompletion
+1838,    -- Register-ArgumentCompleter
+1838,    -- Register-ArgumentCompleter
+8084,    -- Convert-PSObjectToHashtable
+1843,    -- Set-TabExpansionOption
+1843,    -- Set-TabExpansionOption
+1833,    -- Set-CompletionPrivateData
+1833,    -- Set-CompletionPrivateData
+1835,    -- Get-CompletionWithExtension
+1835,    -- Get-CompletionWithExtension
+1990,    -- Get-FilestreamReturnValue
+1990,    -- Get-FilestreamReturnValue
+11649,    -- Reset-SqlAdmin
+1841,    -- WriteCompleters
+1842,    -- WriteCompleter
+1841,    -- WriteCompleters
+1841    -- WriteCompleters
+    )
+    AND b.FunctionId NOT IN (
+1435   , -- Clear-GroupMembers
+674       , -- Clear-GroupMembers
+1837,    -- Get-CommandTreeCompletion
+1837,    -- Get-CommandTreeCompletion
+1838,    -- Register-ArgumentCompleter
+1838,    -- Register-ArgumentCompleter
+8084,    -- Convert-PSObjectToHashtable
+1843,    -- Set-TabExpansionOption
+1843,    -- Set-TabExpansionOption
+1833,    -- Set-CompletionPrivateData
+1833,    -- Set-CompletionPrivateData
+1835,    -- Get-CompletionWithExtension
+1835,    -- Get-CompletionWithExtension
+1990,    -- Get-FilestreamReturnValue
+1990,    -- Get-FilestreamReturnValue
+11649,    -- Reset-SqlAdmin
+1841,    -- WriteCompleters
+1842,    -- WriteCompleter
+1841,    -- WriteCompleters
+1841    -- WriteCompleters
+    )
 )
 SELECT TOP 20
     IdA,
@@ -253,9 +296,17 @@ SELECT TOP 20
     PathB,
     SimilarityDistance
 FROM Pairs
-WHERE SimilarityDistance < 0.15
+WHERE SimilarityDistance < 0.2
     AND FunctionNameA <> FunctionNameB
-    AND OwnerA <> OwnerB
+     AND OwnerA <> OwnerB
+
+     /*
+     Or just using the SimilarityDistance
+     */
+--WHERE SimilarityDistance < 0.2
+--AND SimilarityDistance > 0.1
+
+
 ORDER BY SimilarityDistance;
 '@
 
