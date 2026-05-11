@@ -61,8 +61,7 @@ Invoke-DbaQuery @queryDefaults -Query $statsQuery | Format-Table -AutoSize
 # Audience: "Few thousand functions, hundreds of files. The vector index
 # means each search is sub-second regardless. Let's go find something."
 Write-PSFMessage -Level Host -Message "Few thousand functions, hundreds of files. The vector index means each search is sub-second regardless. Let's see what's similar."
-Read-Host "Press Enter for the first query"
-cls
+
 # endregion
 
 # -----------------------------------------------------------------------------
@@ -166,7 +165,8 @@ Read-Host "Press Enter to find near-duplicates across the corpus"
 
 Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
 
-
+Read-Host "Press Enter for the second query"
+cls
 # -----------------------------------------------------------------------------
 # region : Act 1 — Find-SimilarFunction
 # -----------------------------------------------------------------------------
