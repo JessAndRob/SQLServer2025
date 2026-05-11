@@ -188,7 +188,8 @@ DECLARE @q VECTOR(1536) =
 
 SELECT TOP (@top)
     f.FunctionName,
-    f.FilePath,
+    f.OwnerName,
+    f.RepoName,
     f.ParamSignature,
     s.distance
 FROM   VECTOR_SEARCH(
@@ -313,7 +314,7 @@ while ($continueAct1) {
 # different names, never discoverable by Get-Command. The model recognised
 # the SHAPE of the function, not the keywords."
 
-Read-Host "Press Enter for the second query"
+Read-Host "Now we are done - THANK YOU! Press Enter to wrap up and take questions"
 # endregion
 
 
