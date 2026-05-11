@@ -1,5 +1,5 @@
 #requires -Modules dbatools, PSFramework
-
+cls
 # =============================================================================
 # Demo 01 — "HHEEEEEELLLLLPPPP"
 #
@@ -26,7 +26,7 @@ $queryDefaults = @{
 }
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
-Write-PSFMessage -Level Host -Message "We have all the cmdlet help data we need, but let's ask some questions to find the right cmdlets for our needs. "
+Write-PSFMessage -Level Host -Message "We have all the cmdlet help data we need stored in the database. A simple Get-Help piped to Write-DbaDatabaseTable and then embeddings generated. but let's ask some questions to find the right cmdlets for our needs. "
 Read-Host "Press Enter to continue"
 # endregion
 cls

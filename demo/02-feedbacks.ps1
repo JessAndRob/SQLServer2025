@@ -1,5 +1,5 @@
 #requires -Modules dbatools, PSFramework
-
+cls
 # =============================================================================
 # Demo 03 — SQL Server 2025 calls Azure OpenAI from T-SQL
 #

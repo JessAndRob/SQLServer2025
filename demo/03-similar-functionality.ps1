@@ -1,5 +1,5 @@
 #requires -Modules dbatools, PSFramework
-
+cls
 # =============================================================================
 # Demo 03 — "Show of hands: how many of you have a scripts folder where you
 # suspect three different people have written Get-LastBackupAge independently?"
@@ -165,7 +165,7 @@ Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates ac
 Read-Host "Press Enter to find near-duplicates across the corpus"
 
 Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
-cls
+
 
 # -----------------------------------------------------------------------------
 # region : Act 1 — Find-SimilarFunction
@@ -272,6 +272,7 @@ $demoFunctionKeys = @($demoFunctions.Keys)
 $continueAct1 = $true
 
 while ($continueAct1) {
+    cls
     Write-PSFMessage -Level Host -Message ''
     Write-PSFMessage -Level Host -Message 'Pick a function sample to search:'
     for ($i = 0; $i -lt $demoFunctionKeys.Count; $i++) {
