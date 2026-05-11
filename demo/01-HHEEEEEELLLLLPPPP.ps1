@@ -26,8 +26,9 @@ $queryDefaults = @{
 }
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
+Read-Host "We have all the cmdlet help data we need, but let's ask some questions to find the right cmdlets for our needs. Press Enter to continue..."
 # endregion
-
+cls
 
 # -----------------------------------------------------------------------------
 # region : Act 1 — find cmdlets by meaning
@@ -61,12 +62,12 @@ ORDER BY Distance;
 
 Write-PSFMessage -Level Host -Message "Question: I need to read a file line by line"
 Find-CmdletByMeaning -Question 'I need to read a file line by line' -Top 5 | Format-Table -AutoSize -Wrap
-
+cls
 Read-Host "Press Enter for the next question"
 
 Write-PSFMessage -Level Host -Message "Question: how do I parse JSON"
 Find-CmdletByMeaning -Question 'how do I parse JSON' -Top 5 | Format-Table -AutoSize -Wrap
-
+cls
 Read-Host "Press Enter for the next question"
 
 Write-PSFMessage -Level Host -Message "Question: wait until a job finishes"

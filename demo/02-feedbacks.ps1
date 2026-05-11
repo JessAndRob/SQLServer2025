@@ -71,6 +71,8 @@ Invoke-DbaQuery @queryDefaults -Query $cleanupQuery | Out-Null
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
 # endregion
+Write-PSFMessage -Level Host -Message "Imagine we've taken a feedback form from a recent release. A few dozen customers across the PowerShell community, each leaving a few comments. Let's have a look at who's in there."
+
 
 
 # -----------------------------------------------------------------------------
@@ -79,7 +81,8 @@ Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseNam
 # Audience: "Imagine we've taken a feedback form from a recent release. A few
 # dozen customers across the PowerShell community, each leaving a few
 # comments. Let's have a look at who's in there."
-
+cls
+Read-Host "Press Enter to see the customers who left feedback"
 Write-PSFMessage -Level Host -Message "Here's a sample of the customers who left feedback:"
 
 $customerSampleQuery = @'
@@ -94,7 +97,8 @@ Invoke-DbaQuery @queryDefaults -Query $customerSampleQuery | Format-Table -AutoS
 
 # Audience: "Familiar faces. Now one piece of feedback from each of them so
 # you get a feel for the kind of thing that's in the table."
-
+Read-Host "Press Enter"
+cls
 Write-PSFMessage -Level Host -Message "And here's a sample of the feedback they left:"
 
 $feedbackPerPersonQuery = @'
@@ -119,7 +123,7 @@ Invoke-DbaQuery @queryDefaults -Query $feedbackPerPersonQuery | Format-Table -Au
 # Audience: "Mix of praise and a recurring grumble about documentation. Pretty
 # typical post-release feedback. There are about a hundred rows in total —
 # more than we want to read top to bottom in a meeting."
-
+cls
 Write-PSFMessage -Level Host -Message "Lets use SQL Server 2025 to summarise this feedback for the PM, so they can scan it in fifteen seconds instead of reading a hundred rows by using Azure OpenAI's text-embedding-3-small model. "
 
 Read-Host "Press Enter to summarise the feedback"
@@ -149,7 +153,8 @@ Write-PSFMessage -Level Host -Message "-------------------"
 # headline feature."
 
 Write-PSFMessage -Level Host -Message "That summary came from the text-embedding-3-small model in Azure OpenAI. It's the same model we have access to in PowerShell with the Azure.AI.OpenAI module — but here we're calling it directly from SQL Server attached directly to our data. No middle layer, no glue code, just T-SQL. Cool, right?"
-
+Read-Host "Press Enter"
+cls
 Read-Host "More Feedback has come in since we ran that summary. The PM can run the Function again to get the latest insights."
 # endregion
 
