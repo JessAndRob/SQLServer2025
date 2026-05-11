@@ -263,6 +263,46 @@ function Invoke-WithRetry {
         }
     }
 }
+
+
+'@
+
+
+    ResolvePath=@'
+function Resolve-PathSafe {
+    param([string]$Path)
+    $resolved = Resolve-Path $Path -ErrorAction SilentlyContinue
+    if ($resolved) {
+        return $resolved.Path
+    } else {
+        throw "Path not found: $Path"
+    }
+}
+'@
+
+    WriteLog=@'
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$LogPath = "C:\logs\app.log"
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    $entry | Out-File -FilePath $LogPath -Append -Encoding UTF8
+}
+'@
+
+    GetEnvVariables=@'
+    function Get-EnvVars {
+    param([string[]]$Keys = @())
+
+    $env = @{}
+    foreach ($k in $Keys) {
+        $env[$k] = $env:$k
+    }
+    return $env
+}
 '@
 }
 
