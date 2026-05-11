@@ -134,16 +134,16 @@ WITH Pairs AS (
     )
 )
 SELECT TOP 20
-    IdA,
-    IdB,
+   -- IdA,
+   -- IdB,
     FunctionNameA,
     FunctionNameB,
     OwnerA,
     OwnerB,
     RepoNameA,
     RepoNameB,
-    PathA,
-    PathB,
+    -- PathA,
+    -- PathB,
     SimilarityDistance
 FROM Pairs
 WHERE SimilarityDistance < 0.2
