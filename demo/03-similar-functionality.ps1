@@ -60,7 +60,7 @@ Invoke-DbaQuery @queryDefaults -Query $statsQuery | Format-Table -AutoSize
 
 # Audience: "Few thousand functions, hundreds of files. The vector index
 # means each search is sub-second regardless. Let's go find something."
-Write-PSFMessage -Level Host -Message "Few thousand functions, hundreds of files. The vector index means each search is sub-second regardless. Let's see what's similar."
+Write-PSFMessage -Level Host -Message "Few thousand functions, hundreds of files. The vector index means each search is performant. Let's see what's similar."
 
 # endregion
 
@@ -378,64 +378,6 @@ Read-Host "Now we are done - THANK YOU! Press Enter to wrap up and take question
 # endregion
 
 
-# -----------------------------------------------------------------------------
-# region : Act 2 — Near-duplicates across the estate
-# -----------------------------------------------------------------------------
-# Audience: "Second trick. We don't have a sample function this time — we
-# self-join the table on itself and ask: 'show me every PAIR of functions
-# whose vectors are within X cosine distance.' The < on FunctionId stops us
-# pairing each row with itself and prevents (A, B) and (B, A) duplicates."
-
-$dupesQuery = @'
-WITH Pairs AS (
-    SELECT a.FunctionId AS IdA,
-           b.FunctionId AS IdB,
-           a.FunctionName AS FunctionNameA,
-           b.FunctionName AS FunctionNameB,
-           a.OwnerName AS OwnerA,
-           b.OwnerName AS OwnerB,
-           a.RepoName AS RepoNameA,
-           b.RepoName AS RepoNameB,
-           a.FilePath AS PathA,
-           b.FilePath AS PathB,
-           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
-    FROM dbo.ScriptFunction a
-    JOIN dbo.ScriptFunction b ON a.FunctionId < b.FunctionId
-    WHERE a.Embedding IS NOT NULL
-      AND b.Embedding IS NOT NULL
-)
-SELECT TOP 20
-    IdA,
-    IdB,
-    FunctionNameA,
-    FunctionNameB,
-    OwnerA,
-    OwnerB,
-    RepoNameA,
-    RepoNameB,
-    PathA,
-    PathB,
-    SimilarityDistance
-FROM Pairs
-WHERE SimilarityDistance < 0.15
-    AND FunctionNameA <> FunctionNameB
-    AND OwnerA <> OwnerB
-ORDER BY SimilarityDistance;
-'@
-
-Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
-Read-Host "Press Enter to find near-duplicates across the corpus"
-
-Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
-
-# Audience: "Top of the list: probably-actual-duplicates. Different repos,
-# sometimes different authors, doing the same thing. Now I'm going to slide
-# the threshold up live — watch the pair list grow."
-
-# PRESENTER: edit the WHERE Distance < ... value and re-run the query a
-# couple of times: 0.05 → 0.15 → 0.25 → 0.30. The pair count grows, the
-# clusters get fuzzier, and somewhere in the 0.20–0.30 range you cross
-# from "near-duplicate" to "thematic neighbour" — both are interesting.
 
 # CLOSER: paste the body of Find-CmdletByMeaning from demo 01 into
 # Find-SimilarFunction and let the audience watch your own demo code
