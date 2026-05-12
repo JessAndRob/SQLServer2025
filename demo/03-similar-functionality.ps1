@@ -40,7 +40,7 @@ $queryDefaults = @{
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
 # endregion
-Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
+Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
 
 # -----------------------------------------------------------------------------
 # region : Reality check — what's in the corpus?
