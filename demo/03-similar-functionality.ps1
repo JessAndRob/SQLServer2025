@@ -1,5 +1,5 @@
 #requires -Modules dbatools, PSFramework
-
+cls
 # =============================================================================
 # Demo 03 — "Show of hands: how many of you have a scripts folder where you
 # suspect three different people have written Get-LastBackupAge independently?"
@@ -40,7 +40,7 @@ $queryDefaults = @{
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
 # endregion
-
+Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
 
 # -----------------------------------------------------------------------------
 # region : Reality check — what's in the corpus?
@@ -60,11 +60,113 @@ Invoke-DbaQuery @queryDefaults -Query $statsQuery | Format-Table -AutoSize
 
 # Audience: "Few thousand functions, hundreds of files. The vector index
 # means each search is sub-second regardless. Let's go find something."
+Write-PSFMessage -Level Host -Message "Few thousand functions, hundreds of files. The vector index means each search is sub-second regardless. Let's see what's similar."
 
-Read-Host "Press Enter for the first query"
 # endregion
 
+# -----------------------------------------------------------------------------
+# region : Act 2 — Near-duplicates across the estate
+# -----------------------------------------------------------------------------
+# Audience: "Second trick. We don't have a sample function this time — we
+# self-join the table on itself and ask: 'show me every PAIR of functions
+# whose vectors are within X cosine distance.' The < on FunctionId stops us
+# pairing each row with itself and prevents (A, B) and (B, A) duplicates."
 
+$dupesQuery = @'
+WITH Pairs AS (
+    SELECT a.FunctionId AS IdA,
+           b.FunctionId AS IdB,
+           a.FunctionName AS FunctionNameA,
+           b.FunctionName AS FunctionNameB,
+           a.OwnerName AS OwnerA,
+           b.OwnerName AS OwnerB,
+           a.RepoName AS RepoNameA,
+           b.RepoName AS RepoNameB,
+           a.FilePath AS PathA,
+           b.FilePath AS PathB,
+           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
+    FROM (SELECT TOP 5000 * FROM dbo.ScriptFunction ORDER BY FunctionId) a
+    JOIN (SELECT TOP 5000 * FROM dbo.ScriptFunction ORDER BY FunctionId) b ON a.FunctionId <> b.FunctionId
+    WHERE
+        a.FunctionId NOT IN (
+1435   , -- Clear-GroupMembers
+674       , -- Clear-GroupMembers
+1837,    -- Get-CommandTreeCompletion
+1837,    -- Get-CommandTreeCompletion
+1838,    -- Register-ArgumentCompleter
+1838,    -- Register-ArgumentCompleter
+8084,    -- Convert-PSObjectToHashtable
+1843,    -- Set-TabExpansionOption
+1843,    -- Set-TabExpansionOption
+1833,    -- Set-CompletionPrivateData
+1833,    -- Set-CompletionPrivateData
+1835,    -- Get-CompletionWithExtension
+1835,    -- Get-CompletionWithExtension
+1990,    -- Get-FilestreamReturnValue
+1990,    -- Get-FilestreamReturnValue
+11649,    -- Reset-SqlAdmin
+1841,    -- WriteCompleters
+1842,    -- WriteCompleter
+1841,    -- WriteCompleters
+1841    -- WriteCompleters
+    )
+    AND b.FunctionId NOT IN (
+1435   , -- Clear-GroupMembers
+674       , -- Clear-GroupMembers
+1837,    -- Get-CommandTreeCompletion
+1837,    -- Get-CommandTreeCompletion
+1838,    -- Register-ArgumentCompleter
+1838,    -- Register-ArgumentCompleter
+8084,    -- Convert-PSObjectToHashtable
+1843,    -- Set-TabExpansionOption
+1843,    -- Set-TabExpansionOption
+1833,    -- Set-CompletionPrivateData
+1833,    -- Set-CompletionPrivateData
+1835,    -- Get-CompletionWithExtension
+1835,    -- Get-CompletionWithExtension
+1990,    -- Get-FilestreamReturnValue
+1990,    -- Get-FilestreamReturnValue
+11649,    -- Reset-SqlAdmin
+1841,    -- WriteCompleters
+1842,    -- WriteCompleter
+1841,    -- WriteCompleters
+1841    -- WriteCompleters
+    )
+)
+SELECT TOP 20
+   -- IdA,
+   -- IdB,
+    FunctionNameA,
+    FunctionNameB,
+    OwnerA,
+    OwnerB,
+    RepoNameA,
+    RepoNameB,
+    -- PathA,
+    -- PathB,
+    SimilarityDistance
+FROM Pairs
+WHERE SimilarityDistance < 0.2
+    AND FunctionNameA <> FunctionNameB
+     AND OwnerA <> OwnerB
+
+     /*
+     Or just using the SimilarityDistance
+     */
+--WHERE SimilarityDistance < 0.2
+--AND SimilarityDistance > 0.1
+
+
+ORDER BY SimilarityDistance;
+'@
+
+Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
+Read-Host "Press Enter to find near-duplicates across the corpus"
+
+Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
+
+Read-Host "Press Enter for the second query"
+cls
 # -----------------------------------------------------------------------------
 # region : Act 1 — Find-SimilarFunction
 # -----------------------------------------------------------------------------
@@ -86,8 +188,9 @@ DECLARE @q VECTOR(1536) =
 
 SELECT TOP (@top)
     f.FunctionName,
-    f.FilePath,
-    f.ParamSignature,
+    f.OwnerName,
+    f.RepoName,
+   -- f.ParamSignature,
     s.distance
 FROM   VECTOR_SEARCH(
            TABLE      = dbo.ScriptFunction AS f,
@@ -160,6 +263,65 @@ function Invoke-WithRetry {
         }
     }
 }
+
+
+'@
+
+
+    ResolvePath=@'
+function Resolve-PathSafe {
+    param([string]$Path)
+    $resolved = Resolve-Path $Path -ErrorAction SilentlyContinue
+    if ($resolved) {
+        return $resolved.Path
+    } else {
+        throw "Path not found: $Path"
+    }
+}
+'@
+
+    WriteLog=@'
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$LogPath = "C:\logs\app.log"
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    $entry | Out-File -FilePath $LogPath -Append -Encoding UTF8
+}
+'@
+
+    GetEnvVariables=@'
+    function Get-EnvVars {
+    param([string[]]$Keys = @())
+
+    $env = @{}
+    foreach ($k in $Keys) {
+        $env[$k] = $env:$k
+    }
+    return $env
+}
+'@
+EnsureDirectory=@'
+function Ensure-Directory {
+    param([string]$Path)
+    if (-not (Test-Path $Path -PathType Container)) {
+        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+    }
+}
+'@
+Testexists=@'
+function Test-FileExistsAndNotEmpty {
+    param([string]$Path)
+
+    if (Test-Path $Path -PathType Leaf) {
+        $size = (Get-Item $Path).Length
+        return $size -gt 0
+    }
+    return $false
+}
 '@
 }
 
@@ -170,6 +332,7 @@ $demoFunctionKeys = @($demoFunctions.Keys)
 $continueAct1 = $true
 
 while ($continueAct1) {
+    cls
     Write-PSFMessage -Level Host -Message ''
     Write-PSFMessage -Level Host -Message 'Pick a function sample to search:'
     for ($i = 0; $i -lt $demoFunctionKeys.Count; $i++) {
@@ -210,59 +373,10 @@ while ($continueAct1) {
 # different names, never discoverable by Get-Command. The model recognised
 # the SHAPE of the function, not the keywords."
 
-Read-Host "Press Enter for the second query"
+Read-Host "Now we are done - THANK YOU! Press Enter to wrap up and take questions"
 # endregion
 
 
-# -----------------------------------------------------------------------------
-# region : Act 2 — Near-duplicates across the estate
-# -----------------------------------------------------------------------------
-# Audience: "Second trick. We don't have a sample function this time — we
-# self-join the table on itself and ask: 'show me every PAIR of functions
-# whose vectors are within X cosine distance.' The < on FunctionId stops us
-# pairing each row with itself and prevents (A, B) and (B, A) duplicates."
-
-$dupesQuery = @'
-WITH Pairs AS (
-    SELECT a.FunctionId AS IdA,
-           b.FunctionId AS IdB,
-           a.FunctionName AS FunctionNameA,
-           b.FunctionName AS FunctionNameB,
-           a.OwnerName AS OwnerA,
-           b.OwnerName AS OwnerB,
-           a.RepoName AS RepoNameA,
-           b.RepoName AS RepoNameB,
-           a.FilePath AS PathA,
-           b.FilePath AS PathB,
-           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
-    FROM dbo.ScriptFunction a
-    JOIN dbo.ScriptFunction b ON a.FunctionId < b.FunctionId
-    WHERE a.Embedding IS NOT NULL
-      AND b.Embedding IS NOT NULL
-)
-SELECT TOP 20
-    IdA,
-    IdB,
-    FunctionNameA,
-    FunctionNameB,
-    OwnerA,
-    OwnerB,
-    RepoNameA,
-    RepoNameB,
-    PathA,
-    PathB,
-    SimilarityDistance
-FROM Pairs
-WHERE SimilarityDistance < 0.15
-    AND FunctionNameA <> FunctionNameB
-    AND OwnerA <> OwnerB
-ORDER BY SimilarityDistance;
-'@
-
-Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
-Read-Host "Press Enter to find near-duplicates across the corpus"
-
-Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
 
 # Audience: "Top of the list: probably-actual-duplicates. Different repos,
 # sometimes different authors, doing the same thing. Now I'm going to slide
