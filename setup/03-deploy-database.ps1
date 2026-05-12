@@ -1,5 +1,4 @@
 #requires -Modules dbatools, PSFramework
-
 # Deploys 02-database.sql to a SQL Server 2025 instance via dbatools, pulling
 # the Azure OpenAI endpoint, key, and deployment name from SecretManagement.
 # All output goes through PSFramework's Write-PSFMessage so it can be captured

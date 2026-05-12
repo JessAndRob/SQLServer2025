@@ -40,7 +40,7 @@ $queryDefaults = @{
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
 # endregion
-Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
+Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
 
 # -----------------------------------------------------------------------------
 # region : Reality check — what's in the corpus?
@@ -322,6 +322,46 @@ function Test-FileExistsAndNotEmpty {
     }
     return $false
 }
+
+
+'@
+
+
+    ResolvePath=@'
+function Resolve-PathSafe {
+    param([string]$Path)
+    $resolved = Resolve-Path $Path -ErrorAction SilentlyContinue
+    if ($resolved) {
+        return $resolved.Path
+    } else {
+        throw "Path not found: $Path"
+    }
+}
+'@
+
+    WriteLog=@'
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$LogPath = "C:\logs\app.log"
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $entry = "$timestamp - $Message"
+    $entry | Out-File -FilePath $LogPath -Append -Encoding UTF8
+}
+'@
+
+    GetEnvVariables=@'
+    function Get-EnvVars {
+    param([string[]]$Keys = @())
+
+    $env = @{}
+    foreach ($k in $Keys) {
+        $env[$k] = $env:$k
+    }
+    return $env
+}
 '@
 }
 
@@ -377,6 +417,55 @@ Read-Host "Now we are done - THANK YOU! Press Enter to wrap up and take question
 # endregion
 
 
+# -----------------------------------------------------------------------------
+# region : Act 2 — Near-duplicates across the estate
+# -----------------------------------------------------------------------------
+# Audience: "Second trick. We don't have a sample function this time — we
+# self-join the table on itself and ask: 'show me every PAIR of functions
+# whose vectors are within X cosine distance.' The < on FunctionId stops us
+# pairing each row with itself and prevents (A, B) and (B, A) duplicates."
+
+$dupesQuery = @'
+WITH Pairs AS (
+    SELECT a.FunctionId AS IdA,
+           b.FunctionId AS IdB,
+           a.FunctionName AS FunctionNameA,
+           b.FunctionName AS FunctionNameB,
+           a.OwnerName AS OwnerA,
+           b.OwnerName AS OwnerB,
+           a.RepoName AS RepoNameA,
+           b.RepoName AS RepoNameB,
+           a.FilePath AS PathA,
+           b.FilePath AS PathB,
+           VECTOR_DISTANCE('cosine', a.Embedding, b.Embedding) AS SimilarityDistance
+    FROM dbo.ScriptFunction a
+    JOIN dbo.ScriptFunction b ON a.FunctionId < b.FunctionId
+    WHERE a.Embedding IS NOT NULL
+      AND b.Embedding IS NOT NULL
+)
+SELECT TOP 20
+    IdA,
+    IdB,
+    FunctionNameA,
+    FunctionNameB,
+    OwnerA,
+    OwnerB,
+    RepoNameA,
+    RepoNameB,
+    PathA,
+    PathB,
+    SimilarityDistance
+FROM Pairs
+WHERE SimilarityDistance < 0.15
+    AND FunctionNameA <> FunctionNameB
+    AND OwnerA <> OwnerB
+ORDER BY SimilarityDistance;
+'@
+
+Write-PSFMessage -Level Host -Message "Here's a sample of the near-duplicates across the corpus, within a cosine distance of 0.15:"
+Read-Host "Press Enter to find near-duplicates across the corpus"
+
+Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
 
 # Audience: "Top of the list: probably-actual-duplicates. Different repos,
 # sometimes different authors, doing the same thing. Now I'm going to slide

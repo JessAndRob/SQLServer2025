@@ -1,5 +1,5 @@
 #requires -Modules dbatools, PSFramework
-
+cls
 # =============================================================================
 # Demo 01 — "HHEEEEEELLLLLPPPP"
 #
@@ -26,8 +26,10 @@ $queryDefaults = @{
 }
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
+Write-PSFMessage -Level Host -Message "We have all the cmdlet help data we need stored in the database. A simple Get-Help piped to Write-DbaDatabaseTable and then embeddings generated. but let's ask some questions to find the right cmdlets for our needs. "
+Read-Host "Press Enter to continue"
 # endregion
-
+cls
 
 # -----------------------------------------------------------------------------
 # region : Act 1 — find cmdlets by meaning
@@ -63,12 +65,12 @@ Write-PSFMessage -Level Host -Message "Question: I need to read a file line by l
 Find-CmdletByMeaning -Question 'I need to read a file line by line' -Top 5 | Format-Table -AutoSize -Wrap
 
 Read-Host "Press Enter for the next question"
-
+cls
 Write-PSFMessage -Level Host -Message "Question: how do I parse JSON"
 Find-CmdletByMeaning -Question 'how do I parse JSON' -Top 5 | Format-Table -AutoSize -Wrap
 
 Read-Host "Press Enter for the next question"
-
+cls
 Write-PSFMessage -Level Host -Message "Question: wait until a job finishes"
 Find-CmdletByMeaning -Question 'wait until a job finishes' -Top 5 | Format-Table -AutoSize -Wrap
 # endregion
