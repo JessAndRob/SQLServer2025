@@ -21,7 +21,7 @@ cls
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# region : Connection
+#region : Connection
 # -----------------------------------------------------------------------------
 $SqlInstance   = '10.10.10.65'
 $DatabaseName  = 'pwsh-scripts-🤣'
@@ -39,11 +39,11 @@ $queryDefaults = @{
 }
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
-# endregion
+#endregion
 Write-PSFMessage -Level Host -Message "We have a corpus of a few thousand functions from across the PowerShell community, all embedded and indexed. Let's see what's in there."
 
 # -----------------------------------------------------------------------------
-# region : Reality check — what's in the corpus?
+#region : Reality check — what's in the corpus?
 # -----------------------------------------------------------------------------
 # Audience: "Quick look at the canvas. How many functions did we extract,
 # from how many files, across how many repos? This is the haystack."
@@ -62,10 +62,10 @@ Invoke-DbaQuery @queryDefaults -Query $statsQuery | Format-Table -AutoSize
 # means each search is sub-second regardless. Let's go find something."
 Write-PSFMessage -Level Host -Message "Few thousand functions, hundreds of files. The vector index means each search is performant. Let's see what's similar."
 
-# endregion
+#endregion
 
 # -----------------------------------------------------------------------------
-# region : Act 2 — Near-duplicates across the estate
+#region : Act 2 — Near-duplicates across the estate
 # -----------------------------------------------------------------------------
 # Audience: "Second trick. We don't have a sample function this time — we
 # self-join the table on itself and ask: 'show me every PAIR of functions
@@ -165,10 +165,12 @@ Read-Host "Press Enter to find near-duplicates across the corpus"
 
 Invoke-DbaQuery @queryDefaults -Query $dupesQuery | Format-Table -AutoSize -Wrap
 
+#endregion
+
 Read-Host "Press Enter for the second query"
 cls
 # -----------------------------------------------------------------------------
-# region : Act 1 — Find-SimilarFunction
+#region : Act 1 — Find-SimilarFunction
 # -----------------------------------------------------------------------------
 # Audience: "First trick. We paste in a function — any function — and ask the
 # database 'show me the ten functions in the corpus most similar to this
@@ -389,4 +391,4 @@ Read-Host "Now we are done - THANK YOU! Press Enter to wrap up and take question
 #      on a slider."
 #   3. This finds the thing Get-Command can't: 'we already wrote that, it's
 #      just called something different.'
-# endregion
+#endregion

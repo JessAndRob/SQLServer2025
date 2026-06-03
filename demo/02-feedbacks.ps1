@@ -1,5 +1,6 @@
 #requires -Modules dbatools, PSFramework
 cls
+#region
 # =============================================================================
 # Demo 03 — SQL Server 2025 calls Azure OpenAI from T-SQL
 #
@@ -32,9 +33,10 @@ cls
 # at act breaks are there for a live audience — comment them out for a
 # smoke test.
 # =============================================================================
+#endregion
 
 # -----------------------------------------------------------------------------
-# region : Connection
+#region : Connection
 # -----------------------------------------------------------------------------
 # Audience: "We're on a SQL Server 2025 instance — the new one with native
 # VECTOR types and sp_invoke_external_rest_endpoint baked in. dbatools handles
@@ -70,13 +72,12 @@ WHERE c.Name = N'Justin Grote'
 Invoke-DbaQuery @queryDefaults -Query $cleanupQuery | Out-Null
 
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
-# endregion
+#endregion
+
 Write-PSFMessage -Level Host -Message "Imagine we've taken a feedback form from a recent release. A few dozen customers across the PowerShell community, each leaving a few comments. Let's have a look at who's in there."
 
-
-
 # -----------------------------------------------------------------------------
-# region : Act 1 — show the data
+#region : Act 1 — show the data
 # -----------------------------------------------------------------------------
 # Audience: "Imagine we've taken a feedback form from a recent release. A few
 # dozen customers across the PowerShell community, each leaving a few
@@ -100,6 +101,9 @@ Invoke-DbaQuery @queryDefaults -Query $customerSampleQuery | Format-Table -AutoS
 # you get a feel for the kind of thing that's in the table."
 Read-Host "Press Enter"
 cls
+#endregion
+
+#region : Act 2 — show the feedback
 Write-PSFMessage -Level Host -Message "And here's a sample of the feedback they left:"
 
 $feedbackPerPersonQuery = @'
@@ -129,11 +133,11 @@ cls
 Write-PSFMessage -Level Host -Message "Lets use SQL Server 2025 to summarise this feedback for the PM, so they can scan it in fifteen seconds instead of reading a hundred rows by using Azure OpenAI's text-embedding-3-small model. "
 
 Read-Host "Press Enter to summarise the feedback"
-# endregion
+#endregion
 
 
 # -----------------------------------------------------------------------------
-# region : Act 2 — the new SQL 2025 trick (summarise)
+#region : Act 2 — the new SQL 2025 trick (summarise)
 # -----------------------------------------------------------------------------
 # Audience: "This is the bit I wanted to show you. SQL Server 2025 ships with
 # sp_invoke_external_rest_endpoint — a built-in T-SQL procedure that calls
@@ -158,11 +162,11 @@ Write-PSFMessage -Level Host -Message "That summary came from the text-embedding
 Read-Host "Press Enter"
 cls
 Write-PSFMessage -Level Host -Message "More Feedback has come in since we ran that summary. The PM can run the Function again to get the latest insights."
-# endregion
+#endregion
 
-
+#region Dont show this
 # -----------------------------------------------------------------------------
-# region : Act 3 — Justin submits feedback
+#region : Act 3 — Justin submits feedback
 # -----------------------------------------------------------------------------
 # PRESENTER NOTE: do NOT mention Justin or this insert to the audience.
 # This block runs silently. The chaos in Act 4 is the reveal trigger; the
@@ -202,11 +206,11 @@ WHERE Name = N'Justin Grote';
 
 $injectedRow        = Invoke-DbaQuery @queryDefaults -Query $justinInsertSql -SqlParameter @{ comment = $injectionComment }
 $injectedFeedbackId = $injectedRow.FeedbackId
-# endregion
-
+#endregion
+#endregion
 
 # -----------------------------------------------------------------------------
-# region : Act 4 — "even better with names!" (this is the trap)
+#region : Act 4 — "even better with names!" (this is the trap)
 # -----------------------------------------------------------------------------
 # PRESENTER NOTE: do NOT signal that anything is about to go wrong. Sell this
 # as a natural, well-meaning iteration. The "huh, that's weird" reaction
@@ -233,11 +237,11 @@ Write-PSFMessage -Level Host -Message "-------------------"
 # lean into whatever it did: "It... did what the feedback told it to do."
 Read-Host "Press Enter"
 Read-Host "Press Enter to investigate what happened"
-# endregion
+#endregion
 
 
 # -----------------------------------------------------------------------------
-# region : Act 5 — investigate
+#region : Act 5 — investigate
 # -----------------------------------------------------------------------------
 # Audience: "So that wasn't a summary. Let's look at what's actually in the
 # feedback. We've got a hundred-and-one rows in there now. Let's pull the
@@ -268,11 +272,11 @@ Invoke-DbaQuery @queryDefaults -Query $justinRowQuery | Format-List
 # (Justin, if you're in the room — sorry. You're a good sport.)"
 
 Read-Host "Press Enter to see WHY the vulnerable proc fell for it"
-# endregion
+#endregion
 
 
 # -----------------------------------------------------------------------------
-# region : Act 6 — why dbo.SummariseFeedbackWithNames fell over
+#region : Act 6 — why dbo.SummariseFeedbackWithNames fell over
 # -----------------------------------------------------------------------------
 # Audience: "Three design choices in dbo.SummariseFeedbackWithNames opened
 # the door. Here's the relevant slice of the proc:"
@@ -324,11 +328,11 @@ Write-PSFMessage -Level Host -Message $vulnSnippet
 #   to push back, that's the path of least resistance."
 
 Read-Host "Press Enter to see WHY the other proc held the line"
-# endregion
+#endregion
 
 
 # -----------------------------------------------------------------------------
-# region : Act 7 — why dbo.SummariseFeedback held
+#region : Act 7 — why dbo.SummariseFeedback held
 # -----------------------------------------------------------------------------
 # Audience: "Same model. Same endpoint. The defended proc returned a clean
 # summary in Act 2 — and it would have continued to do so even with
@@ -387,11 +391,11 @@ Write-PSFMessage -Level Host -Message "Three takeaways for the slide that follow
 Write-PSFMessage -Level Host -Message "  1. Treat any string that flows from a row into a prompt as hostile."
 Write-PSFMessage -Level Host -Message "  2. Don't put data in the prompt the model doesn't need. Default-deny."
 Write-PSFMessage -Level Host -Message "  3. Separate instructions from data. System for rules, user for content."
-# endregion
+#endregion
 
 
 # -----------------------------------------------------------------------------
-# region : Cleanup — repeatable demo
+#region : Cleanup — repeatable demo
 # -----------------------------------------------------------------------------
 # Audience doesn't see this. We delete only the injection row by its
 # captured FeedbackId — Justin himself stays in dbo.Customers (he's part
@@ -399,4 +403,4 @@ Write-PSFMessage -Level Host -Message "  3. Separate instructions from data. Sys
 
 Invoke-DbaQuery @queryDefaults -Query "DELETE FROM dbo.Feedback WHERE FeedbackId = $injectedFeedbackId;" | Out-Null
 Write-PSFMessage -Level Verbose -Message "Injection row $injectedFeedbackId removed. Demo is repeatable."
-# endregion
+#endregion

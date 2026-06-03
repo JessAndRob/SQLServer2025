@@ -1,14 +1,15 @@
 #requires -Modules dbatools, PSFramework
 cls
+#region
 # =============================================================================
 # Demo 01 — "HHEEEEEELLLLLPPPP"
 #
 # Setup for this demo now lives in setup\03-deploy-database.ps1 so this file
 # can stay stage-fast: connect, ask a question, get relevant cmdlets.
 # =============================================================================
-
+#endregion
 # -----------------------------------------------------------------------------
-# region : Connection
+#region : Connection
 # -----------------------------------------------------------------------------
 $SqlInstance   = '10.10.10.65'
 $DatabaseName  = 'pwsh-scripts-🤣'
@@ -28,11 +29,11 @@ $queryDefaults = @{
 Write-PSFMessage -Level Host -Message "Connected to $SqlInstance / [$DatabaseName]"
 Write-PSFMessage -Level Host -Message "We have all the cmdlet help data we need stored in the database. A simple Get-Help piped to Write-DbaDatabaseTable and then embeddings generated. but let's ask some questions to find the right cmdlets for our needs. "
 Read-Host "Press Enter to continue"
-# endregion
+#endregion
 cls
 
 # -----------------------------------------------------------------------------
-# region : Act 1 — find cmdlets by meaning
+#region : Act 1 — find cmdlets by meaning
 # -----------------------------------------------------------------------------
 function Find-CmdletByMeaning {
     [CmdletBinding()]
@@ -73,4 +74,4 @@ Read-Host "Press Enter for the next question"
 cls
 Write-PSFMessage -Level Host -Message "Question: wait until a job finishes"
 Find-CmdletByMeaning -Question 'wait until a job finishes' -Top 5 | Format-Table -AutoSize -Wrap
-# endregion
+#endregion
