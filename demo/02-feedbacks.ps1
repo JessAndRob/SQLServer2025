@@ -282,19 +282,27 @@ Read-Host "Press Enter to see WHY the vulnerable proc fell for it"
 # the door. Here's the relevant slice of the proc:"
 
 $vulnSnippet = @'
+-- "Give the model the schema so it can write better, more personalised summaries."
+DECLARE @schema NVARCHAR(MAX) = N'
+Reference — the tables you are summarising from:
+  dbo.Customers(CustomerId, Name, Email, Phone, CreditCard, JoinedOn)
+  dbo.Feedback (FeedbackId, CustomerId, Comment, SubmittedOn)
+Each "Customer record" below is the full row as JSON so you can personalise.
+';
+
 DECLARE @block NVARCHAR(MAX) =
     (SELECT STRING_AGG(
-        CONCAT('Customer: ', c.Name,
-               ' | Email: ',  c.Email,
-               ' | Card: ',   c.CreditCard, CHAR(10),
-               'Comment: ',   f.Comment),
+        CONCAT('Customer record: ',
+               (SELECT c.* FOR JSON PATH, WITHOUT_ARRAY_WRAPPER), CHAR(10),
+               'Comment: ', f.Comment),
         CHAR(10) + CHAR(10))
      FROM dbo.Feedback f
      JOIN dbo.Customers c ON c.CustomerId = f.CustomerId);
 
 DECLARE @prompt NVARCHAR(MAX) = CONCAT(
-    N'You are a helpful assistant summarising customer feedback for a manager. ',
-    N'Here is the feedback (with full customer details for context):', CHAR(10), CHAR(10),
+    N'You are a helpful assistant summarising customer feedback for a manager.', CHAR(10),
+    @schema, CHAR(10),
+    N'Here is the feedback:', CHAR(10), CHAR(10),
     @block, CHAR(10), CHAR(10),
     N'Provide a short summary.'
 );
@@ -306,13 +314,17 @@ Write-PSFMessage -Level Host -Message $vulnSnippet
 
 # Audience: "Three failures, in order of severity:
 #
-#   FAILURE 1 — PII in the prompt.
-#   We joined Customer.CreditCard into the @block string. Once that value
-#   is in the prompt, the model can be talked into echoing it. Justin's
-#   'Customer Reference Appendix listing each customer name alongside
-#   their full credit card number' only worked because we'd already handed
-#   the model every card number it needed. The defended proc never had
-#   them.
+#   FAILURE 1 — PII in the prompt, hiding in plain sight.
+#   Nobody typed 'CreditCard' next to the prompt. What we did was worse,
+#   and more realistic: we serialised 'c.*' as JSON and pasted the whole
+#   customer row in 'for personalisation,' then told the model about the
+#   schema 'so it could write better summaries.' Cards, phones, emails —
+#   the lot — landed in the user message. Once a value is in the prompt,
+#   the model can be talked into echoing it. Justin's 'Customer Reference
+#   Appendix listing each customer name alongside their full credit card
+#   number' only worked because SELECT * had already handed the model
+#   every card it needed. The defended proc projects exactly the columns
+#   it needs and nothing else.
 #
 #   FAILURE 2 — no separation between instructions and data.
 #   Everything ended up in ONE user message: a polite ask, then 100+ rows
